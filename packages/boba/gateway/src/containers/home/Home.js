@@ -109,6 +109,7 @@ import Alert from 'components/alert/Alert'
 
 import { POLL_INTERVAL } from 'util/constant'
 import LayerSwitcher from 'components/mainMenu/layerSwitcher/LayerSwitcher'
+import { trackPageView } from 'util/googleAnalytics'
 
 require('dotenv').config()
 
@@ -230,6 +231,11 @@ function Home() {
       dispatch(getMonsterInfo())
     }
   }, [ dispatch, accountEnabled, maintenance ])
+
+  useEffect(() => {
+    trackPageView(pageDisplay)
+  }, [pageDisplay])
+
 
   console.log("Home - account enabled:", accountEnabled, "layer:", layer, "Base enabled:", baseEnabled)
 
@@ -366,7 +372,7 @@ function Home() {
             {pageDisplay === "Bridge" &&
               <Bridge />
             }
-            {pageDisplay === "Monster" &&
+            { pageDisplay === "Monster" &&
               <MonsterWrapper />
             }
           </Container>
