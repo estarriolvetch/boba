@@ -14,31 +14,28 @@ See the License for the specific language governing permissions and
 limitations under the License. */
 
 import { createAction } from './createAction'
+import networkService from 'services/networkService'
+
 import store from 'store'
 
 export function getNFTs () {
   const state = store.getState()
-  return state.nft.list;
+  return state.nft.list
 }
 
 export async function addNFT ( NFT ) {
-  
-  const state = store.getState()
-  const UUID = NFT.UUID
 
-  //if we already have added it, no need to add again
-  if (state.nft.list[UUID]) {
-    return state.nft.list[UUID]
-  }
-  
   const info = {
     UUID: NFT.UUID,
     address: NFT.address,
-    name:  NFT.name, 
+    name:  NFT.name,
     tokenID: NFT.tokenID,
     symbol:  NFT.symbol,
     url: NFT.url,
-    meta: NFT.meta
+    meta: NFT.meta,
+    account: NFT.account,
+    network: NFT.network,
+    layer: NFT.layer
   }
 
   store.dispatch({
@@ -48,6 +45,19 @@ export async function addNFT ( NFT ) {
 
   return info
 
+}
+
+export async function addMonster ( monster ) {
+  store.dispatch({
+    type: 'MONSTER/INFO/SUCCESS',
+    payload: monster
+  })
+}
+
+export function getMonsterInfo() {
+  return createAction('MONSTER/NUMBER', () =>
+    networkService.checkMonster()
+  )
 }
 
 export function removeNFT( UUID ) {

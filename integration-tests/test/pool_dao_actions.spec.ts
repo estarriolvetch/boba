@@ -2,7 +2,7 @@ import chai, { expect } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 chai.use(chaiAsPromised)
 import { Contract, ContractFactory, BigNumber, utils, ethers } from 'ethers'
-import { Direction } from './shared/watcher-utils'
+
 import { getContractFactory } from '@eth-optimism/contracts'
 
 import L1BobaJson from '@boba/contracts/artifacts/contracts/DAO/governance-token/BOBA.sol/BOBA.json'
@@ -198,9 +198,8 @@ describe('Dao Action Test', async () => {
       env.l1Wallet
     )
 
-    const L1StandardBridgeAddress = await env.addressManager.getAddress(
-      'Proxy__L1StandardBridge'
-    )
+    const L1StandardBridgeAddress = await env.addressesBASE
+      .Proxy__L1StandardBridge
 
     L1StandardBridge = getContractFactory(
       'L1StandardBridge',
@@ -272,8 +271,7 @@ describe('Dao Action Test', async () => {
           quorumVotesPlus,
           9999999,
           ethers.utils.formatBytes32String(new Date().getTime().toString())
-        ),
-        Direction.L1ToL2
+        )
       )
     }
   })
@@ -592,7 +590,7 @@ describe('Dao Action Test', async () => {
       expect(proposalStates[state]).to.deep.eq('Executed')
 
       // involves xDomain message, wait for xdomain relay
-      await env.waitForXDomainTransactionFast(executeTx, Direction.L2ToL1)
+      await env.waitForXDomainTransactionFast(executeTx)
 
       const userRewardMinFeeRate = await L1LiquidityPool.userRewardMinFeeRate()
       const userRewardMaxFeeRate = await L1LiquidityPool.userRewardMaxFeeRate()
@@ -604,6 +602,125 @@ describe('Dao Action Test', async () => {
       expect(ownerRewardFeeRate).to.deep.eq(
         initialL1LPOwnerRewardFeeRate.add(1)
       )
+    })
+  })
+
+  describe('Text Only Proposal', async () => {
+    it('{tag:other} should delegate voting rights', async () => {
+      const delegateTx = await L2Boba.delegate(env.l2Wallet.address)
+      await delegateTx.wait()
+      const updatedDelegate = await L2Boba.delegates(env.l2Wallet.address)
+      expect(updatedDelegate).to.eq(env.l2Wallet.address)
+      const L2BobaBalance = await L2Boba.balanceOf(env.l2Wallet.address)
+      const currentVotes = await L2Boba.getCurrentVotes(env.l2Wallet.address)
+      expect(currentVotes).to.eq(L2BobaBalance)
+    })
+
+    it('{tag:other} should create a new proposal to configure fee', async () => {
+      try {
+        const priorProposalID = (await Governor.proposalCount())._hex
+        console.log(priorProposalID.toString())
+        if (priorProposalID !== '0x00') {
+          const priorState = await Governor.state(priorProposalID)
+
+          console.log(priorState.toString())
+          // clear any pending or active proposal
+          if (priorState === 0 || priorState === 1) {
+            const cancelTx = await Governor.cancel(priorProposalID)
+            await cancelTx.wait()
+          }
+        }
+        await moveTimeForward()
+
+        // for text only proposals, set target to a null address
+        const addresses = ['0x000000000000000000000000000000000000dEaD'] // the address of the contract where the function will be called
+        const values = [0] // the eth necessary to send to the contract above
+        const signatures = [''] // the function that will carry out the proposal
+
+        const calldatas = [
+          '0x0000000000000000000000000000000000000000000000000000000000000000',
+        ]
+
+        const description = '# Text only proposal' // the description of the proposal
+
+        // submit the proposal
+        const proposeTx = await Governor.propose(
+          addresses,
+          values,
+          signatures,
+          calldatas,
+          description
+        )
+        await proposeTx.wait()
+
+        const proposalID = (await Governor.proposalCount())._hex
+
+        // const proposal = await Governor.proposals(proposalID)
+        // console.log(`Proposal:`, proposal)
+
+        const state = await Governor.state(proposalID)
+        expect(proposalStates[state]).to.deep.eq('Pending')
+      } catch (error) {
+        // cancel the current proposal if there's a problem to avoid errors on rerun
+        const proposalID = (await Governor.proposalCount())._hex
+        const cancelTx = await Governor.cancel(proposalID)
+        await cancelTx.wait()
+      }
+    })
+
+    it('{tag:other} should cast vote to the proposal and wait for voting period to end', async () => {
+      try {
+        // get current voting delay from contract
+        const votingDelay = (await Governor.votingDelay()).toNumber()
+        console.log('\twaiting for voting period to start...')
+        // mock timestmap
+        // convert to milliseconds
+        await moveTimeForward((votingDelay + 1) * 1000)
+
+        const proposalID = (await Governor.proposalCount())._hex
+
+        await Governor.castVote(proposalID, 1)
+
+        // const proposal = await Governor.proposals(proposalID)
+        // console.log(`Proposal End Block:`, proposal.endBlock.toString())
+
+        const stateAfterVote = await Governor.state(proposalID)
+        expect(proposalStates[stateAfterVote]).to.deep.eq('Active')
+
+        // wait till voting period ends
+        console.log('\twaiting for voting period to end...')
+
+        const votingPeriod = (await Governor.votingPeriod()).toNumber()
+        // mock timestamp
+        await moveTimeForward((votingPeriod + 1) * 1000)
+
+        const stateAfterVotingPeriod = await Governor.state(proposalID)
+        expect(proposalStates[stateAfterVotingPeriod]).to.deep.eq('Succeeded')
+      } catch (error) {
+        console.log(error)
+        // cancel the current proposal if there's a problem to avoid errors on rerun
+        const proposalID = (await Governor.proposalCount())._hex
+        const cancelTx = await Governor.cancel(proposalID)
+        await cancelTx.wait()
+      }
+    })
+
+    it('{tag:other} should queue the proposal successfully', async () => {
+      const proposalID = (await Governor.proposalCount())._hex
+      const queueTx = await Governor.queue(proposalID)
+      await queueTx.wait()
+
+      const state = await Governor.state(proposalID)
+      expect(proposalStates[state]).to.deep.eq('Queued')
+    })
+
+    it('{tag:other} should execute the proposal successfully', async () => {
+      const proposalID = (await Governor.proposalCount())._hex
+      const executeTx = await Governor.execute(proposalID)
+      await executeTx.wait()
+
+      const state = await Governor.state(proposalID)
+      expect(proposalStates[state]).to.deep.eq('Executed')
     })
   })
 })

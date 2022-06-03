@@ -4,7 +4,7 @@ import chai, { expect } from 'chai'
 import { GWEI, fundUser, encodeSolidityRevertMessage } from './shared/utils'
 import { OptimismEnv } from './shared/env'
 import { solidity } from 'ethereum-waffle'
-import { sleep } from '../../packages/core-utils/dist'
+import { sleep } from '@eth-optimism/core-utils'
 import {
   getContractFactory,
   getContractInterface,
@@ -40,8 +40,25 @@ describe('Native ETH value integration tests', () => {
       expect(realBalances[1]).to.deep.eq(expectedBalances[1])
     }
 
-    const value = 10
-    await fundUser(env.watcher, env.l1Bridge, value, wallet.address)
+    // In the local test environment, test acounts can use zero gas price.
+    // In l2geth, we override the gas price in api.go if the gas price is nil or zero
+    // gasPrice := new(big.Int)
+    // price, err := b.SuggestPrice(ctx)
+    // if err == nil && args.GasPrice == nil && isFeeTokenUpdate {
+    //   gasPrice = price
+    //   args.GasPrice = (*hexutil.Big)(price)
+    // }
+    // The design for overwriting the gas price is to get the correct estimated gas
+    // from state_transition.go, because the calculation for the l1 security fee is based on
+    // the gas price.
+    // This requires users to have enough balance to pypass the estimateGas checks and they
+    // can't transfer all ETH balance without providing the gas limit,
+    // because all balance + l1securityfee is larger than the total balance
+    // In the production environment, this problem doesn't exist, because
+    // users can't use zero gas price and they have to have enough balance to
+    // cover the cost
+    const value = ethers.utils.parseEther('1')
+    await fundUser(env.messenger, value, wallet.address)
 
     const initialBalances = await getBalances()
 
@@ -61,6 +78,8 @@ describe('Native ETH value integration tests', () => {
       to: wallet.address,
       value,
       gasPrice: 0,
+      // Provide the gas limit to ignore the eth_estimateGas
+      gasLimit: 1100000,
     })
     await backAgain.wait()
 
@@ -142,13 +161,8 @@ describe('Native ETH value integration tests', () => {
     beforeEach(async () => {
       ValueCalls0 = await Factory__ValueCalls.deploy()
       ValueCalls1 = await Factory__ValueCalls.deploy()
-      await fundUser(
-        env.watcher,
-        env.l1Bridge,
-        initialBalance0,
-        ValueCalls0.address
-      )
-      // These tests ass assume ValueCalls0 starts with a balance, but ValueCalls1 does not.
+      await fundUser(env.messenger, initialBalance0, ValueCalls0.address)
+      // These tests assume ValueCalls0 starts with a balance, but ValueCalls1 does not.
       await checkBalances([initialBalance0, 0])
     })
 
@@ -189,12 +203,8 @@ describe('Native ETH value integration tests', () => {
     it('{tag:other} should have the correct ovmSELFBALANCE which includes the msg.value', async () => {
       // give an initial balance which the ovmCALLVALUE should be added to when calculating ovmSELFBALANCE
       const initialBalance = 10
-      await fundUser(
-        env.watcher,
-        env.l1Bridge,
-        initialBalance,
-        ValueCalls1.address
-      )
+
+      await fundUser(env.messenger, initialBalance, ValueCalls1.address)
 
       const sendAmount = 15
       const [success, returndata] = await ValueCalls0.callStatic.sendWithData(

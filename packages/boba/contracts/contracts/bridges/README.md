@@ -1,17 +1,5 @@
 # Boba NFT Bridges
 
-- [Boba NFT Bridges](#boba-nft-bridges)
-  * [Native L1 NFT - Developer Requirements](#native-l1-nft---developer-requirements)
-  * [Native L2 NFT - Developer Requirements](#native-l2-nft---developer-requirements)
-  * [How to bridge NFTs](#how-to-bridge-nfts)
-    + [CASE 1 - Native L1 NFT - Bridge NFTs from Ethereum to Boba](#case-1---native-l1-nft---bridge-nfts-from-ethereum-to-boba)
-    + [CASE 2 - Native L1 NFT - Bridge NFTs from Boba to Ethereum](#case-2---native-l1-nft---bridge-nfts-from-boba-to-ethereum)
-    + [CASE 3 - Native L2 NFT - Bridge NFTs from Boba to Ethereum](#case-3---native-l2-nft---bridge-nfts-from-boba-to-ethereum)
-    + [CASE 4 - Native L2 NFT - Bridge NFTs from Ethereum to Boba](#case-4---native-l2-nft---bridge-nfts-from-ethereum-to-boba)
-  * [Links](#links)
-    + [Mainnet](#mainnet)
-    + [Rinkeby](#rinkeby)
-
 <img width="1097" alt="Boba NFT Bridge" src="https://user-images.githubusercontent.com/46272347/145503571-0b5e34c9-c55e-4ff8-8749-19a130d32958.png">
 
 Boba NFT bridges support **native L1 NFTs** and **native L2 NFTs** to be moved back and forth.
@@ -82,8 +70,7 @@ Users then call the `depositNFT` or `depositNFTTo` function to deposit NFT to L2
 const tx = await L1NFTBrige.depositNFT(
   L1_NFT_CONTRACT_ADDRESS,
   TOKEN_ID,
-  9999999, // L2 gas
-  ethers.utils.formatBytes32String(new Date().getTime().toString())
+  9999999 // L2 gas
 )
 await tx.wait()
 ```
@@ -97,14 +84,19 @@ const approveTx = await L2NFT.approve(L2_NFT_BRIDGE_ADDRESS, TOKEN_ID)
 await approveTx.wait()
 ```
 
-Then, users call the `withdraw` or `withdrawTo` function to exit the NFT from Boba to Ethereum. The NFT will arrive on L1 after the seven days.
+Users have to approve the Boba for the exit fee next. They then call the `withdraw` or `withdrawTo` function to exit the NFT from Boba to Ethereum. The NFT will arrive on L1 after the seven days.
 
 ```js
+const exitFee = await BOBABillingContract.exitFee()
+const approveBOBATx = await L2BOBAToken.approve(
+  L2NFTBrige.address,
+  exitFee
+)
+await approveBOBATx.wait()
 const tx = await L2NFTBrige.withdraw(
   L2_NFT_CONTRACT_ADDRESS,
   TOKEN_ID,
-  9999999, // L2 gas
-  ethers.utils.formatBytes32String(new Date().getTime().toString())
+  9999999 // L2 gas
 )
 await tx.wait()
 ```
@@ -118,14 +110,19 @@ const approveTx = await L2NFT.approve(L2_NFT_BRIDGE_ADDRESS, TOKEN_ID)
 await approveTx.wait()
 ```
 
-Users then call the `withdraw` or `withdrawTo` function to exit NFT from L2. The NFT will arrive on L1 after the seven days.
+Users have to approve the Boba for the exit fee next. They then call the `withdraw` or `withdrawTo` function to exit NFT from L2. The NFT will arrive on L1 after the seven days.
 
 ```js
+const exitFee = await BOBABillingContract.exitFee()
+const approveBOBATx = await L2BOBAToken.approve(
+  L2NFTBrige.address,
+  exitFee
+)
+await approveBOBATx.wait()
 const tx = await L2NFTBrige.withdraw(
   L2_NFT_CONTRACT_ADDRESS,
   TOKEN_ID,
-  9999999, // L2 gas
-  ethers.utils.formatBytes32String(new Date().getTime().toString())
+  9999999 // L2 gas
 )
 await tx.wait()
 ```
@@ -145,24 +142,7 @@ Users then call the `depositNFT` or `depositNFTTo` function to deposit NFT to L2
 const tx = await L1NFTBrige.depositNFT(
   L1_NFT_CONTRACT_ADDRESS,
   TOKEN_ID,
-  9999999, // L2 gas
-  ethers.utils.formatBytes32String(new Date().getTime().toString())
+  9999999 // L2 gas
 )
 await tx.wait()
 ```
-
-## Links
-
-### Mainnet
-
-| Contract Name      | Contract Address                           |
-| ------------------ | ------------------------------------------ |
-| Proxy__L1NFTBridge | 0xC891F466e53f40603250837282eAE4e22aD5b088 |
-| Proxy__L2NFTBridge | 0xFB823b65D0Dc219fdC0d759172D1E098dA32f9eb |
-
-### Rinkeby
-
-| Contract Name      | Contract Address                           |
-| ------------------ | ------------------------------------------ |
-| Proxy__L1NFTBridge | 0x01F5d5D6de3a8c7A157B22FD331A1F177b7bE043 |
-| Proxy__L2NFTBridge | 0x5E368E9dce71B624D7DdB155f360E7A4969eB7aA |

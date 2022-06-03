@@ -61,8 +61,12 @@ export function amountToUsd(amount, lookupPrice, token) {
     return amount * lookupPrice['ethereum'].usd
   } else if (token.symbol === 'BOBA' && !!lookupPrice[ 'boba-network' ]) {
     return amount * lookupPrice['boba-network'].usd
+  } else if (token.symbol === 'OLO' && !!lookupPrice[ 'oolongswap' ]) {
+    return amount * lookupPrice['oolongswap'].usd
   } else if (token.symbol === 'OMG' && !!lookupPrice[ 'omisego' ]) {
     return amount * lookupPrice['omisego'].usd
+  } else if (token.symbol === 'USDC' && !!lookupPrice[ 'usd-coin' ]) {
+    return amount * lookupPrice['usd-coin'].usd 
   } else if (!!lookupPrice[ token.symbol.toLowerCase() ]) {
     return amount * lookupPrice[token.symbol.toLowerCase()].usd
   } else {

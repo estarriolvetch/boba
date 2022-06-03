@@ -16,7 +16,8 @@
     "clean": "rimraf  dist/ ./tsconfig.build.tsbuildinfo",
     "lint": "yarn lint:fix && yarn lint:check",
     "lint:fix": "prettier --config .prettierrc.json --write \"{src,exec,test}/**/*.ts\"",
-    "lint:check": "tslint --format stylish --project ."
+    "lint:check": "tslint --format stylish --project .",
+    "test": "hardhat test --show-stack-traces"
   },
   "keywords": [
     "optimism",
@@ -27,17 +28,16 @@
   "devDependencies": {
     "@boba/contracts": "0.0.1",
     "@eth-optimism/contracts": "^0.5.11",
-    "@eth-optimism/core-utils": "^0.5.1",
+    "@eth-optimism/core-utils": "0.8.1",
     "@ethersproject/providers": "^5.0.24",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
-
     "@types/mocha": "^8.2.2",
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
     "directory-tree": "^2.2.7",
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.1.0",
-    "hardhat": "^2.3.0",
+    "hardhat": "^2.9.2",
     "mocha": "^8.3.1",
     "prettier": "^2.2.1",
     "rimraf": "^3.0.2",
@@ -61,6 +61,7 @@
     "lodash": "^4.17.21",
     "merkletreejs": "^0.2.18",
     "patch-package": "^6.4.7",
-    "rlp": "^2.2.6"
+    "rlp": "^2.2.6",
+    "node-fetch": "^2.6.1"
   }
 }
